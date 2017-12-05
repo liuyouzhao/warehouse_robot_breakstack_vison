@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+  
+  <node name="cam3d_above_arm_v1_depth" pkg="cam3d" type="cam3d_above_arm_v1_depth" />
+ 
+  <!--node name="points_node" pkg="cam3d" type="points_node"/-->
+
+</launch>

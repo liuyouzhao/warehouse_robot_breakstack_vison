@@ -1,0 +1,4 @@
+bool pick_start
+---
+bool succeeded
+geometry_msgs/Pose target_pose

@@ -1,0 +1,17 @@
+## camera 3d brands
+CONFIG_HAL_CAMERA_CAM3D_ORBBEC=y
+CONFIG_HAL_CAMERA_CAM3D_KINNECT=n
+
+## graph arch
+CONFIG_HAL_GRAPH_GL_X11=y
+CONFIG_HAL_GRAPH_GL_WIN=n
+
+
+## if build hal/tests
+CONFIG_HAL_TESTS=y
+
+
+
+## Extra env.
+## ROS
+CONFIG_EXTRA_ROS_PATH=/opt/ros/indigo
