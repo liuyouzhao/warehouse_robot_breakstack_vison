@@ -46,7 +46,8 @@ namespace vt
         double  z;
         unsigned short u, v, d;
         unsigned short u_rgb, v_rgb;
-        cv::Mat newdepth = Mat::zeros(src.rows, src.cols, CV_16U);
+        cv::Mat newdepth = Mat::zeros(src.rows, src.cols, CV_16S);
+        cv::Mat newdepth2 = Mat::zeros(src.rows, src.cols, CV_8U);
         for (v = 0; v < src.rows; v++)
         {
             for (u = 0; u < src.cols; u++)
@@ -56,11 +57,18 @@ namespace vt
                     continue;
                 //printf("%d,%d,%d\r\n",u,v,d);
                 z = (double)d;
+                /**
+                  |R0, R1, T2, 3| * |U  |
+                  |R4, R5, T6, 7|   |V  |
+                                    |1  |
+                                    |1/Z|
+                  */
                 u_rgb = (unsigned short)((mat[0] * (double)u + mat[1] * (double)v + mat[2] + mat[3] / z));
                 v_rgb = (unsigned short)((mat[4] * (double)u + mat[5] * (double)v + mat[6] + mat[7] / z));
 
+
                 if (u_rgb < 0 || u_rgb >= newdepth.cols || v_rgb < 0 || v_rgb >= newdepth.rows) continue;
-                unsigned short *val = (unsigned short *)newdepth.ptr<uchar>(v_rgb)+u_rgb;
+                unsigned short *val = (unsigned short *)newdepth.ptr<uchar>(v_rgb) + u_rgb;
                 *val = d;
             }
         }

@@ -199,6 +199,17 @@ static void convert_depth_data(short *p_short_depth, float *p_depth, int size)
     }
 }
 
+//static void __show_dep_image(Mat dep)
+//{
+//    for(int i = 0; i < dep.rows; i ++)
+//    {
+//        for(int j = 0; j < dep.cols; j ++)
+//        {
+
+//        }
+//    }
+//}
+
 static int alg_box_deliver()
 {
     /**
@@ -272,6 +283,7 @@ static int alg_box_deliver()
                                         bjam_depth_proc::singleton()->region(),
                                         out_pt_add,
                                         out_rotate_rect);
+
     if( rgb_result != 0 )
         return rgb_result;
 
@@ -414,7 +426,7 @@ static int alg_box_test(const char *f1, const char* f2, int w, int h)
       Segmentation go go go!
       */
     bjam_depth_proc::singleton()->run();
-
+    cv::Mat mapped = bjam_depth_proc::singleton()->depth_mapped();
 //    if(bjam_depth_proc::singleton()->has_damn_right() != 0)
 //    {
 //        imshow("only by depth", bjam_depth_proc::singleton()->result_image());
@@ -436,8 +448,33 @@ static int alg_box_test(const char *f1, const char* f2, int w, int h)
                                         bjam_depth_proc::singleton()->region(),
                                         out_pt_add,
                                         out_rotate_rect);
+    Mat color_rect = col(bjam_depth_proc::singleton()->region());
+    Mat mat_dep_result = bjam_depth_proc::singleton()->result_image();
 
+    int erosion_type;
+    int erosion_size = 5;
+    int erosion_elem = 0;
+    if( erosion_elem == 0 ) { erosion_type = MORPH_RECT; }
+    else if( erosion_elem == 1 ) { erosion_type = MORPH_CROSS; }
+    else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
+    Mat element = getStructuringElement( erosion_type,
+                                       Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                       Point( erosion_size, erosion_size ) );
+
+    /// Apply the erosion operation
+    Mat src = mat_dep_result.clone();
+    Mat dilation_dst = mat_dep_result.clone();
+    dilate( src, dilation_dst, element );
+
+    //imshow( "dilation", dilation_dst );
+
+    src = src.clone();
+    Mat erosion_dst = src.clone();
+    erode( dilation_dst, erosion_dst, element );
+
+    imshow( "erosion", erosion_dst );
+    //imshow("dep_result", mat_dep_result);
 
     if( rgb_result != 0 )
         return rgb_result;
@@ -494,10 +531,16 @@ static int alg_box_test(const char *f1, const char* f2, int w, int h)
 
     cv::Mat dist_rotated_cliped = clipout_target_image_remain(distRotated, l, r, t, b);
 
-    cv::imshow("dist_rotated_cliped", dist_rotated_cliped);
+
+    //cv::imshow("mapped", mapped);
+    int eps = 10;
+    cv::Mat dep_cliped = clipout_target_image_remain(erosion_dst, l, r, t, b);
+    cv::Mat rgb_cliped = color_rect(Rect(l - eps, t - eps, r - l + eps, b - t + eps));
+    cv::imshow("rgb_cliped", rgb_cliped);
+    cv::imshow("dep_cliped", dep_cliped);
 
     bjam_ltjudgement::init_params(ls, dist_rotated_cliped, s_sku);
-    bjam_ltjudgement::run(type, 1);
+    bjam_ltjudgement::run(type, 3);
 
     prob = bjam_ltjudgement::confidence();
     printf("****************type: %d  prob: %f\n", type, prob);

@@ -77,6 +77,9 @@ int bjam_depth_proc::inform_color_depth_map(cv::Mat color, cv::Mat depth)
     Mat_<Vec3f> world1(m_screen_height, m_screen_width);
     Mat depthNew;
     vt::mappingDepth2Color(m_depth, depthNew, (float*)m_l2r.data);
+
+    m_depth_mapped = depthNew.clone();
+
     float k[5];
     memset(k,0,sizeof(float)*5);
     vt::depth2World((Mat_<short>)depthNew, world1,

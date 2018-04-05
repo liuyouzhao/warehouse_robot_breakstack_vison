@@ -131,7 +131,7 @@ static int __calculate_border_score(int x, int y, int w, int h, int t, cv::Mat i
     score = up + down + left + right;
     score = score * logic;
 
-    //printf("SCORE: %d\n", score);
+    printf("SCORE: %d\n", score);
     if(s_debug == 3)
         __show_border_rect(x, y, w, h, t, image);
 

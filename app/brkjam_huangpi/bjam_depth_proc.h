@@ -52,6 +52,9 @@ public:
     inline std::vector<float> vpts() {    return m_p_ns->pickPoint; }
     inline PlaneFit2*   ns() {  return m_p_ns;  }
     inline cv::Mat* intri(){return m_intri;}
+
+    inline cv::Mat depth_mapped() {  return m_depth_mapped;  }
+
 protected:
     bjam_depth_proc();
 
@@ -79,6 +82,8 @@ private:
     cv::Mat                       m_color;
     cv::Mat                       m_rt_color;
     cv::Mat                       m_depth;
+
+    cv::Mat                       m_depth_mapped;
 
     /**
      * @brief m_target_region
