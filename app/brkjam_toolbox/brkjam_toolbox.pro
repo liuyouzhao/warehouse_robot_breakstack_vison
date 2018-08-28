@@ -7,7 +7,7 @@ CONFIG -= app_bundle
 # any feature of Qt which as been marked deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
-DEFINES += QT_DEPRECATED_WARNINGS
+DEFINES += QT_DEPRECATED_WARNINGS USE_DNN=1
 
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -22,4 +22,7 @@ SOURCES += main.cpp \
     octave_file_generator.cpp \
     binary.cpp
 
+LIBS += -L/usr/local/lib
+
 LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_contrib -lopencv_ml
+QMAKE_LFLAGS += -Wl,-rpath=/usr/local/lib

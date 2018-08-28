@@ -16,6 +16,7 @@ using namespace std;
 #define T_HEIGHT 53
 #define NOISE_M 0.5
 #define FILE_NAME "t3-n/vec-desc-"
+#define RESULT_FOLDER "/home/hujia/1t/workspace/warehouse_robot_breakstack_vison/libs/results"
 #else
 #define T_WIDTH 53
 #define T_HEIGHT 75
@@ -26,17 +27,21 @@ using namespace cv;
 
 float test_B_Dist(Mat b, int t = 0);
 
+static char s_folder[256];
+
 static double SIGMOID_A[] = {
     //-3.450447486214617,
     //0.1338399426888076
 
     /* DNN */
-    //-3.523751335789116,
-    //0.2544172679008934
-
+#if USE_DNN
+    -3.523751335789116,
+    0.2544172679008934
+#else
     /* BIN */
     -3.28699062555766,
     -0.004186793723420901
+#endif
 };
 
 static Mat sColor;
@@ -239,10 +244,18 @@ typedef struct hmm_state_map_node_s
 } hmm_state_map_node_t;
 
 float predictB(Mat b1);
+//#define MIN_RATE 0.5
+//#define MIN_PREDICT 0.3
 #define MIN_RATE 0.5
-#define MIN_PREDICT 0.4
+#define MIN_PREDICT 0.3
 #define HMM_TOLERATE_REGION 10
+#if USE_DNN
+#define MAX_LEVEL 3
+#else
 #define MAX_LEVEL 1
+#endif
+#define MAX_NUMBER 20
+#define CROSS_THICK 14
 static vector< vector<hmm_state_t*> > hmm_tree;
 static vector< hmm_state_t* > hmm_queue;
 static vector< hmm_state_t* > hmm_map1;
@@ -256,8 +269,8 @@ static bool is_cross_parent(hmm_state_t stt, hmm_state_t kid)
     Rect k = kid.rect;
 
     bool cross = false;
-    if(r.x + r.width < k.x || r.y + r.height < k.y ||
-       k.x + k.width < r.x || k.y + k.height < r.y)
+    if(r.x + r.width < k.x + CROSS_THICK || r.y + r.height < k.y + CROSS_THICK ||
+       k.x + k.width < r.x + CROSS_THICK || k.y + k.height < r.y + CROSS_THICK)
     {
         cross = false;
     }
@@ -270,8 +283,8 @@ static bool is_cross_parent(hmm_state_t stt, hmm_state_t kid)
     while(ptr)
     {
         r = ptr->rect;
-        if(r.x + r.width < k.x || r.y + r.height < k.y ||
-           k.x + k.width < r.x || k.y + k.height < r.y)
+        if(r.x + r.width < k.x + CROSS_THICK || r.y + r.height < k.y + CROSS_THICK ||
+           k.x + k.width < r.x + CROSS_THICK || k.y + k.height < r.y + CROSS_THICK)
         {
             cross = false;
         }
@@ -399,13 +412,13 @@ static void hmm_try_push_node(hmm_state_t *stt, hmm_state_t **child, Mat src, in
  * -------------
  * 3           4
  */
-static void hmm_expand_queue_nodes(Mat src, hmm_state_t *stt, int jp, int thick)
+static void hmm_expand_queue_nodes(Mat src, hmm_state_t *stt, int jp, int thick, int thickH = 5)
 {
     Rect r = stt->rect;
     int rl = r.x - thick;
-    int rt = r.y - thick;
+    int rt = r.y - thickH;
     int rr = r.x + r.width + thick;
-    int rb = r.y + r.height + thick;
+    int rb = r.y + r.height + thickH;
 
     int tw1 = T_WIDTH + T_MAGIN * 2;
     int th1 = T_HEIGHT + T_MAGIN * 2;
@@ -413,6 +426,7 @@ static void hmm_expand_queue_nodes(Mat src, hmm_state_t *stt, int jp, int thick)
     int tw2 = th1;
     int th2 = tw1;
 
+#if FULL_DIR
     for(int i = rt; i < rb; i += jp)
     {
         for(int j = rl; j < rr; j += jp)
@@ -456,6 +470,51 @@ static void hmm_expand_queue_nodes(Mat src, hmm_state_t *stt, int jp, int thick)
             hmm_try_push_node(stt, &new_stt4_2, src, -1);
         }
     }
+#else
+    for(int i = rt; i < rb; i += jp)
+    {
+        for(int j = r.x + r.width - CROSS_THICK; j < rr; j += jp)
+        {
+            if(j < r.x + r.width && j > r.x &&
+                i < r.y + r.height && i > r.y)
+            {
+                continue;
+            }
+            /* Class 1*/
+            hmm_state_t *new_stt1_1 = new hmm_state_t();
+            hmm_state_t *new_stt2_1 = new hmm_state_t();
+            hmm_state_t *new_stt3_1 = new hmm_state_t();
+            hmm_state_t *new_stt4_1 = new hmm_state_t();
+
+            /* Class 2*/
+            hmm_state_t *new_stt1_2 = new hmm_state_t();
+            hmm_state_t *new_stt2_2 = new hmm_state_t();
+            hmm_state_t *new_stt3_2 = new hmm_state_t();
+            hmm_state_t *new_stt4_2 = new hmm_state_t();
+
+            new_stt1_1->rect = Rect(j, i, tw1, th1);
+            new_stt1_2->rect = Rect(j, i, tw2, th2);
+
+            new_stt2_1->rect = Rect(j - tw1, i, tw1, th1);
+            new_stt2_2->rect = Rect(j - tw2, i, tw2, th2);
+
+            new_stt3_1->rect = Rect(j, i - th1, tw1, th1);
+            new_stt3_2->rect = Rect(j, i - th2, tw2, th2);
+
+            new_stt4_1->rect = Rect(j - tw1, i - th1, tw1, th1);
+            new_stt4_2->rect = Rect(j - tw2, i - th2, tw2, th2);
+
+            hmm_try_push_node(stt, &new_stt1_1, src, 1);
+            hmm_try_push_node(stt, &new_stt1_2, src, -1);
+            hmm_try_push_node(stt, &new_stt2_1, src, 1);
+            hmm_try_push_node(stt, &new_stt2_2, src, -1);
+            hmm_try_push_node(stt, &new_stt3_1, src, 1);
+            hmm_try_push_node(stt, &new_stt3_2, src, -1);
+            hmm_try_push_node(stt, &new_stt4_1, src, 1);
+            hmm_try_push_node(stt, &new_stt4_2, src, -1);
+        }
+    }
+#endif
 }
 
 static bool hmm_best_sort(hmm_state_t *left, hmm_state_t *right)
@@ -470,6 +529,9 @@ static void hmm_go(Mat image, Point start, int max_levels)
     int st = start.y - (hmm_start_region.height >> 1);
     int sr = start.x + (hmm_start_region.width >> 1);
     int sb = start.y + (hmm_start_region.height >> 1);
+
+    st = st < 0 ? 0 : st;
+    sl = sl < 0 ? 0 : sl;
 
     int tw = T_WIDTH + T_MAGIN * 2;
     int th = T_HEIGHT + T_MAGIN * 2;
@@ -505,21 +567,28 @@ static void hmm_go(Mat image, Point start, int max_levels)
             f1->father = NULL;
             f2->father = NULL;
 
-            Mat b1 = src(f1->rect);
-            Mat b2 = src(f2->rect);
-
-            f1->probability = 1.0 * predictB(b1);
-            f2->probability = 1.0 * predictB(b2);
-
-            if(f1->probability > MIN_RATE)
+            if(f1->rect.x + f1->rect.width < src.cols &&
+               f1->rect.y + f1->rect.height < src.rows)
             {
-                hmm_queue.push_back(f1);
-                hmm_tree[0].push_back(f1);
+                Mat b1 = src(f1->rect);
+                f1->probability = 1.0 * predictB(b1);
+                if(f1->probability > MIN_RATE)
+                {
+                    hmm_queue.push_back(f1);
+                    hmm_tree[0].push_back(f1);
+                }
             }
-            if(f2->probability > MIN_RATE)
+
+            if(f2->rect.x + f2->rect.width < src.cols &&
+               f2->rect.y + f2->rect.height < src.rows)
             {
-                hmm_queue.push_back(f2);
-                hmm_tree[0].push_back(f2);
+                Mat b2 = src(f2->rect);
+                f2->probability = 1.0 * predictB(b2);
+                if(f2->probability > MIN_RATE)
+                {
+                    hmm_queue.push_back(f2);
+                    hmm_tree[0].push_back(f2);
+                }
             }
         }
     }
@@ -530,7 +599,7 @@ static void hmm_go(Mat image, Point start, int max_levels)
     {
         if(hmm_queue[iter]->level <= MAX_LEVEL)
         {
-            hmm_expand_queue_nodes(src, hmm_queue[iter], 2, 10);
+            hmm_expand_queue_nodes(src, hmm_queue[iter], 2, 20, 10);
         }
         iter ++;
     }
@@ -546,7 +615,7 @@ static void hmm_go(Mat image, Point start, int max_levels)
     }
     std::sort(hmm_tree[last_lever].begin(), hmm_tree[last_lever].end(), hmm_best_sort);
 
-    int bestn = hmm_tree[last_lever].size() < 5 ? hmm_tree[last_lever].size() : 5;
+    int bestn = hmm_tree[last_lever].size() < MAX_NUMBER ? hmm_tree[last_lever].size() : MAX_NUMBER;
     for(int i = 0; i < bestn; i ++)
     {
         hmm_state_t *node = hmm_tree[last_lever][i];
@@ -555,6 +624,7 @@ static void hmm_go(Mat image, Point start, int max_levels)
         {
             printf("[%f]<-", node->probability);
 
+            //cv::rectangle(show, node->rect, Scalar(0, 255 / 28 * (20 - i), 255 / 20 * (i + 1)), 2);
             cv::rectangle(show, node->rect, Scalar(0, 0, 255), 2);
 
             node = node->father;
@@ -564,8 +634,13 @@ static void hmm_go(Mat image, Point start, int max_levels)
             }
         }
         char ni[16] = {0};
-        sprintf(ni, "%d", i);
+        sprintf(ni, "%d.jpg", i);
         imshow(string("show") + string(ni), show);
+
+
+        char result_file[256] = {0};
+        sprintf(result_file, "%s/%s/%s", RESULT_FOLDER, s_folder, ni);
+        cv::imwrite(std::string(result_file), show);
         printf("\n");
     }
 }
@@ -694,6 +769,32 @@ int run_hmm()
                 break;
         }
         cv::destroyWindow(std::string(filename));
-
     }
+}
+
+void set_folder_name(const char *folder)
+{
+    memset(s_folder, 0, 256);
+    memcpy(s_folder, folder, strlen(folder));
+}
+
+int single_hmm(const char *file)
+{
+    sColor = cv::imread(file);
+
+    if(sColor.cols == 0 || sColor.rows == 0)
+    {
+        return -1;
+    }
+
+    imshow(file, sColor);
+    setMouseCallback(file, onMouseHandler, NULL);
+
+    while(1)
+    {
+        char k = waitKey(100);
+        if(k == 27)
+            return 0;
+    }
+    cv::destroyWindow(std::string(file));
 }

@@ -1,5 +1,4 @@
 #include "opencv2/opencv.hpp"
-
 #define SAMPLES 100
 #define T_MAGIN 4
 
@@ -261,17 +260,100 @@ int test_B(Mat mat);
 int test_folder();
 int test_image(std::string file);
 void binary_go(const char *folder_src, const char *folder_dst);
+void set_folder_name(const char *folder_name);
+int single_hmm(const char *file);
 
 int main(int argc, char *argv[])
 {
+#if USE_DNN
+    //run_hmm();
+#if 0
+    if(argc == 1)
+    {
+        printf("Usage: brkjam_toolbox [file]\n");
+        exit(-1);
+    }
+    single_hmm(argv[1]);
+#else
+
+#if 1
+    const char *name = "249-2";
+    char folder[256] = {0};
+    char cmd[256] = {0};
+    char file[256] = {0};
+
+    sprintf(folder, "/home/hujia/1t/workspace/warehouse_robot_breakstack_vison/libs/results/%s", name);
+    sprintf(cmd, "mkdir -p %s", folder);
+    sprintf(file, "/home/hujia/1t/workspace/warehouse_robot_breakstack_vison/libs/dnnrt/%s.png", name);
+
+    set_folder_name(name);
+    system(cmd);
+    single_hmm(file);
+#endif
+
+    char *names[] = {
+        "9-2",
+        "18-2",
+        "19-2",
+        "28-2",
+        "29-2",
+        "38-2",
+        "39-2",
+        "48-2",
+        "49-2",
+        "58-2",
+        "59-2",
+        "68-2",
+        "69-2",
+        "78-2",
+        "79-2",
+        "88-2",
+        "89-2",
+        "98-2",
+        "99-2",
+        "108-2"
+    };
+
+    for(int n = 0; n < 20; n ++)
+    {
+        char *name = names[n];
+        char folder[256] = {0};
+        char cmd[256] = {0};
+        char file[256] = {0};
+        char filem[256] = {0};
+
+        sprintf(folder, "/home/hujia/1t/workspace/warehouse_robot_breakstack_vison/libs/results/%s", name);
+        sprintf(cmd, "mkdir -p %s", folder);
+        sprintf(filem, "%s/merged.jpg", folder);
+
+        Mat combined;
+        for(int i = 0; i < 20; i ++)
+        {
+            memset(file, 0, 256);
+            sprintf(file, "%s/%d.jpg", folder, i);
+            Mat img = imread(file);
+            combined.push_back(img);
+        }
+        cv::imwrite(filem, combined);
+
+    }
+
+
+
+#endif
+#else
+
+#endif
+
+
     //train_B();
     //svm_B();
 
 //    Mat testMat = imread("../../libs/dnnrt/9.png.vec/-471000.png");
 //    test_B(testMat);
     //test_folder();
-    run_hmm();
-    //binary_go("../../libs/origin", "../../libs/binary");
+    //run_hmm();
+    //binary_go("../../libs/cliped", "../../libs/binary");
 
     //test_image(std::string("../../libs/binary/col_0.jpg"));
 
